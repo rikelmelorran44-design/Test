@@ -1,5 +1,5 @@
-# main.py — DropIntel: Dashboard Principal
-# Execute com: streamlit run main.py
+# main.py — Rikelme Drop · Plataforma Desktop
+# Execute: streamlit run main.py
 
 import streamlit as st
 import pandas as pd
@@ -7,498 +7,466 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import random
-from config import (
-    APP_NAME, CUSTOS_FIXOS, TOTAL_CUSTOS_FIXOS,
-    MARKETPLACES, MARKETPLACE_CORES
-)
+from config import CUSTOS_FIXOS, TOTAL_CUSTOS_FIXOS, MARKETPLACES, MARKETPLACE_CORES
 
-# ─── Configuração da Página ───────────────────────────────────────────────────
 st.set_page_config(
-    page_title=f"{APP_NAME} · Dashboard",
-    page_icon="⚡",
+    page_title="Rikelme Drop",
+    page_icon="🛍️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ─── CSS Customizado ──────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap');
 
-  html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-  }
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+.stApp { background: #07080F; color: #E0E0F0; }
 
-  /* Fundo escuro premium */
-  .stApp {
-    background: #0A0A0F;
-    color: #E8E8F0;
-  }
+/* Sidebar */
+[data-testid="stSidebar"] {
+  background: #0C0D18 !important;
+  border-right: 1px solid #1A1A30;
+}
+[data-testid="stSidebar"] .block-container { padding: 1.5rem 1rem; }
 
-  /* Sidebar */
-  [data-testid="stSidebar"] {
-    background: #0F0F1A !important;
-    border-right: 1px solid #1E1E2E;
-  }
+/* Remove itens padrão */
+#MainMenu, footer, header { visibility: hidden; }
+.modebar, .modebar-container { display: none !important; }
 
-  /* Cards de métrica */
-  .metric-card {
-    background: linear-gradient(135deg, #13131F 0%, #1A1A2E 100%);
-    border: 1px solid #2A2A3E;
-    border-radius: 16px;
-    padding: 24px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.3s;
-  }
-  .metric-card:hover { border-color: #4A4AFF; }
-  .metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #4A4AFF, #FF4AF8);
-  }
-  .metric-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    color: #6B6B8A;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    margin-bottom: 8px;
-  }
-  .metric-value {
-    font-family: 'Syne', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: #F0F0FF;
-    line-height: 1.1;
-  }
-  .metric-delta {
-    font-size: 13px;
-    font-weight: 500;
-    margin-top: 8px;
-  }
-  .delta-up   { color: #00E87A; }
-  .delta-down { color: #FF4A6E; }
+/* ── Título da sidebar ── */
+.brand {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  background: linear-gradient(90deg, #7B7BFF, #FF5AF5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2px;
+}
+.brand-sub { font-size: 11px; color: #3A3A60; margin-bottom: 20px; }
 
-  /* Títulos de seção */
-  .section-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: #C0C0E0;
-    letter-spacing: 0.5px;
-    margin: 32px 0 16px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+/* ── KPI Cards ── */
+.kpi {
+  background: linear-gradient(135deg, #0E0F1E, #131428);
+  border: 1px solid #1E1E38;
+  border-radius: 16px;
+  padding: 22px 24px;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+.kpi::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, #7B7BFF, #FF5AF5);
+}
+.kpi-label {
+  font-size: 11px; font-weight: 600; color: #3A3A60;
+  text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;
+}
+.kpi-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px; font-weight: 800; color: #F0F0FF; line-height: 1.1;
+}
+.kpi-delta-up   { color: #00D97A; font-size: 12px; font-weight: 600; margin-top: 6px; }
+.kpi-delta-down { color: #FF4A6E; font-size: 12px; font-weight: 600; margin-top: 6px; }
+.kpi-delta-neu  { color: #5A5A90; font-size: 12px; margin-top: 6px; }
 
-  /* Header */
-  .app-header {
-    background: linear-gradient(135deg, #13131F 0%, #1A1A2E 100%);
-    border: 1px solid #2A2A3E;
-    border-radius: 20px;
-    padding: 28px 36px;
-    margin-bottom: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .app-logo {
-    font-family: 'Syne', sans-serif;
-    font-size: 32px;
-    font-weight: 800;
-    background: linear-gradient(90deg, #4A4AFF, #FF4AF8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .app-subtitle {
-    font-size: 14px;
-    color: #6B6B8A;
-    margin-top: 4px;
-  }
-  .status-badge {
-    background: rgba(0, 232, 122, 0.1);
-    border: 1px solid rgba(0, 232, 122, 0.3);
-    color: #00E87A;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
+/* ── Seção título ── */
+.sec {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 700; color: #3A3A60;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin: 28px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1A1A30;
+}
 
-  /* Custo card */
-  .custo-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #1E1E2E;
-    font-size: 14px;
-  }
-  .custo-nome { color: #9090B0; }
-  .custo-valor { color: #F0F0FF; font-weight: 600; font-family: 'Syne', sans-serif; }
+/* ── Insight card ── */
+.ins {
+  border-radius: 12px; padding: 14px 18px;
+  margin-bottom: 8px; border-left: 3px solid;
+}
+.ins-w { background: #18120A; border-color: #F59E0B; }
+.ins-g { background: #081510; border-color: #10B981; }
+.ins-b { background: #0A0A1A; border-color: #7B7BFF; }
+.ins-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.ins-text  { font-size: 12px; color: #5A5A90; line-height: 1.6; }
+.c-w { color: #F59E0B; } .c-g { color: #10B981; } .c-b { color: #8080FF; }
 
-  /* Alerta de insight */
-  .insight-card {
-    background: linear-gradient(135deg, #1A1020 0%, #20102A 100%);
-    border: 1px solid #4A2A6E;
-    border-left: 4px solid #A855F7;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 12px;
-  }
-  .insight-title { color: #C084FC; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-  .insight-text  { color: #9090B0; font-size: 13px; line-height: 1.5; }
+/* ── Custo row ── */
+.cost-row {
+  display: flex; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid #131328; font-size: 13px;
+}
+.c-name { color: #4A4A80; } .c-val { color: #D0D0F0; font-weight: 600; }
 
-  /* Oculta itens padrão do Streamlit */
-  #MainMenu, footer, header { visibility: hidden; }
-  .block-container { padding-top: 2rem; }
-  [data-testid="stMetric"] { display: none; }
+/* ── Tabela ── */
+[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
+
+/* ── Coming soon ── */
+.cs {
+  text-align: center; padding: 80px 40px;
+  background: #0C0D18; border: 1px solid #1A1A30;
+  border-radius: 16px; margin-top: 20px;
+}
+.cs-icon  { font-size: 56px; margin-bottom: 16px; }
+.cs-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:#C0C0E0; margin-bottom:10px; }
+.cs-sub   { font-size:14px; color:#3A3A60; line-height:1.7; max-width:500px; margin:0 auto; }
+
+/* Plotly dark */
+.js-plotly-plot .plotly { border-radius: 12px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Geração de Dados Simulados ───────────────────────────────────────────────
+# ── Dados simulados realistas ─────────────────────────────────────────────────
 @st.cache_data(ttl=300)
-def gerar_dados_simulados():
-    random.seed(42)
-
-    # Vendas dos últimos 30 dias por marketplace
+def dados():
+    random.seed(7)
     hoje = datetime.now()
-    datas = [hoje - timedelta(days=i) for i in range(29, -1, -1)]
-
-    registros = []
-    for data in datas:
+    rows = []
+    bases = {"Kwai Shop": 85, "TikTok Shop": 110, "Amazon": 140, "Shopee": 95}
+    for i in range(29, -1, -1):
+        d = hoje - timedelta(days=i)
         for mp in MARKETPLACES:
-            base = {"Kwai Shop": 280, "TikTok Shop": 420, "Amazon": 650, "Shopee": 380}[mp]
-            variacao = random.uniform(0.7, 1.4)
-            num_pedidos = max(1, int(random.gauss(8, 3)))
-            ticket = base * variacao
-            gmv = ticket * num_pedidos
-            taxa_mp = gmv * random.uniform(0.10, 0.18)
-            custo_produto = gmv * random.uniform(0.40, 0.50)
-            registros.append({
-                "data": data.strftime("%Y-%m-%d"),
-                "marketplace": mp,
-                "pedidos": num_pedidos,
-                "ticket_medio": round(ticket, 2),
-                "gmv": round(gmv, 2),
-                "taxa_marketplace": round(taxa_mp, 2),
-                "custo_produto": round(custo_produto, 2),
-                "receita_liquida": round(gmv - taxa_mp - custo_produto, 2),
+            pedidos = max(1, int(random.gauss(5, 2)))
+            ticket  = bases[mp] * random.uniform(0.8, 1.3)
+            gmv     = ticket * pedidos
+            taxa    = gmv * random.uniform(0.12, 0.18)
+            custo   = gmv * random.uniform(0.38, 0.48)
+            rows.append({
+                "data": d, "marketplace": mp,
+                "pedidos": pedidos, "ticket": round(ticket, 2),
+                "gmv": round(gmv, 2), "taxa": round(taxa, 2),
+                "custo_produto": round(custo, 2),
+                "receita_liq": round(gmv - taxa - custo, 2),
             })
+    return pd.DataFrame(rows)
 
-    df = pd.DataFrame(registros)
-    df["data"] = pd.to_datetime(df["data"])
-    return df
+df_full = dados()
 
-def calcular_metricas(df: pd.DataFrame):
-    # Mês atual (30 dias)
-    gmv_total        = df["gmv"].sum()
-    receita_liquida  = df["receita_liquida"].sum()
-    taxas_total      = df["taxa_marketplace"].sum()
-    pedidos_total    = df["pedidos"].sum()
-    lucro_liquido    = receita_liquida - TOTAL_CUSTOS_FIXOS
-    ticket_medio     = df["ticket_medio"].mean()
-    margem           = (lucro_liquido / gmv_total * 100) if gmv_total > 0 else 0
-
-    return {
-        "gmv_total":       gmv_total,
-        "receita_liquida": receita_liquida,
-        "lucro_liquido":   lucro_liquido,
-        "taxas_total":     taxas_total,
-        "pedidos_total":   int(pedidos_total),
-        "ticket_medio":    ticket_medio,
-        "margem":          margem,
-    }
-
-# ─── Sidebar ──────────────────────────────────────────────────────────────────
+# ── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
-    <div style='text-align:center; padding: 20px 0 30px;'>
-      <div style='font-family:Syne,sans-serif; font-size:24px; font-weight:800;
-                  background:linear-gradient(90deg,#4A4AFF,#FF4AF8);
-                  -webkit-background-clip:text; -webkit-text-fill-color:transparent;'>
-        ⚡ DropIntel
-      </div>
-      <div style='font-size:11px; color:#4A4A6A; margin-top:4px;'>v1.0 · MODO SIMULAÇÃO</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='brand'>🛍️ Rikelme Drop</div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand-sub'>Plataforma de Dropshipping · v1.0</div>", unsafe_allow_html=True)
 
-    st.markdown("### 🧭 Navegação")
-    pagina = st.radio("", [
-        "📊 Dashboard Financeiro",
-        "🤖 Gerador de Anúncios IA",
+    pagina = st.radio("Navegação", [
+        "📊 Dashboard",
+        "💰 Financeiro",
+        "🤖 Gerador de Anúncios",
         "🔍 Auditoria da Loja",
         "💎 Mineração de Produtos",
-    ], label_visibility="collapsed")
+    ])
 
     st.markdown("---")
-    st.markdown("### 📅 Período")
-    periodo = st.selectbox("", ["Últimos 30 dias", "Últimos 7 dias", "Este mês"], label_visibility="collapsed")
+    st.markdown("**📅 Período**")
+    periodo = st.selectbox("", ["Últimos 30 dias", "Últimos 7 dias", "Este mês"],
+                           label_visibility="collapsed")
 
-    st.markdown("---")
-    st.markdown("### 🏪 Marketplaces")
+    st.markdown("**🏪 Marketplaces**")
     mps_ativos = []
     for mp in MARKETPLACES:
-        cor = MARKETPLACE_CORES[mp]
-        checked = st.checkbox(mp, value=True, key=f"mp_{mp}")
-        if checked:
+        if st.checkbox(mp, value=True, key=f"mp_{mp}"):
             mps_ativos.append(mp)
 
     st.markdown("---")
-    st.markdown("""
-    <div style='background:#13131F; border:1px solid #2A2A3E; border-radius:12px; padding:16px; margin-top:8px;'>
-      <div style='font-size:11px; color:#4A4A6A; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;'>
-        💸 Custos Fixos
-      </div>
-    """, unsafe_allow_html=True)
-
-    for nome, valor in CUSTOS_FIXOS.items():
+    st.markdown("**💸 Custos Fixos Mensais**")
+    for nome, val in CUSTOS_FIXOS.items():
         st.markdown(f"""
-        <div class='custo-item'>
-          <span class='custo-nome'>{nome}</span>
-          <span class='custo-valor'>R$ {valor:.2f}</span>
+        <div class='cost-row'>
+          <span class='c-name'>{nome}</span>
+          <span class='c-val'>R$ {val:.2f}</span>
         </div>
         """, unsafe_allow_html=True)
-
     st.markdown(f"""
-      <div style='display:flex; justify-content:space-between; padding-top:12px; margin-top:4px;'>
-        <span style='color:#E0E0FF; font-weight:700; font-size:14px;'>TOTAL</span>
-        <span style='color:#FF4A6E; font-weight:800; font-size:16px; font-family:Syne,sans-serif;'>
-          R$ {TOTAL_CUSTOS_FIXOS:.2f}
-        </span>
-      </div>
+    <div style='display:flex;justify-content:space-between;padding-top:12px;'>
+      <span style='color:#D0D0F0;font-weight:700;font-size:13px;'>TOTAL</span>
+      <span style='color:#FF4A6E;font-weight:800;font-family:Syne,sans-serif;font-size:16px;'>
+        R$ {TOTAL_CUSTOS_FIXOS:.2f}
+      </span>
     </div>
     """, unsafe_allow_html=True)
 
-# ─── Conteúdo Principal ───────────────────────────────────────────────────────
-df = gerar_dados_simulados()
+    st.markdown("---")
+    st.markdown(f"<div style='font-size:10px;color:#2A2A50;text-align:center;'>● DADOS SIMULADOS · {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>",
+                unsafe_allow_html=True)
 
-# Filtro de período
+# ── Filtros ───────────────────────────────────────────────────────────────────
+df = df_full.copy()
 if periodo == "Últimos 7 dias":
     df = df[df["data"] >= datetime.now() - timedelta(days=7)]
 elif periodo == "Este mês":
     df = df[df["data"].dt.month == datetime.now().month]
-
-# Filtro de marketplaces
 if mps_ativos:
     df = df[df["marketplace"].isin(mps_ativos)]
 
-metricas = calcular_metricas(df)
+gmv     = df["gmv"].sum()
+pedidos = int(df["pedidos"].sum())
+ticket  = df["ticket"].mean()
+taxas   = df["taxa"].sum()
+custo_p = df["custo_produto"].sum()
+rec_liq = df["receita_liq"].sum()
+lucro   = rec_liq - TOTAL_CUSTOS_FIXOS
+margem  = lucro / gmv * 100 if gmv else 0
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.markdown(f"""
-<div class='app-header'>
-  <div>
-    <div class='app-logo'>⚡ DropIntel</div>
-    <div class='app-subtitle'>Central de Inteligência para Dropshipping · {periodo}</div>
-  </div>
-  <div>
-    <span class='status-badge'>● DADOS SIMULADOS</span>
-  </div>
-</div>
-""", unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+# DASHBOARD
+# ══════════════════════════════════════════════════════════════════════════════
+if pagina == "📊 Dashboard":
 
-# ── Seção: Página Ativa ───────────────────────────────────────────────────────
-if "Dashboard" in pagina:
+    st.markdown(f"## 📊 Dashboard  <span style='font-size:14px;color:#3A3A60;font-weight:400;'>· {periodo}</span>", unsafe_allow_html=True)
 
-    # KPIs Principais
-    st.markdown("<div class='section-title'>📈 Visão Geral do Período</div>", unsafe_allow_html=True)
-
-    col1, col2, col3, col4 = st.columns(4)
-
+    # KPIs linha 1
+    c1, c2, c3, c4 = st.columns(4)
     kpis = [
-        (col1, "💰 GMV Total",       f"R$ {metricas['gmv_total']:,.2f}",      "▲ +12.4%", True),
-        (col2, "📦 Pedidos",          f"{metricas['pedidos_total']:,}",         "▲ +8.1%",  True),
-        (col3, "🎯 Ticket Médio",     f"R$ {metricas['ticket_medio']:.2f}",    "▲ +3.7%",  True),
-        (col4, "📊 Taxas MP",         f"R$ {metricas['taxas_total']:,.2f}",    "▼ -1.2%",  False),
+        (c1, "💰 GMV Total",    f"R$ {gmv:,.2f}",       "▲ +12.4% vs anterior", True),
+        (c2, "📦 Pedidos",       f"{pedidos:,}",          "▲ +8.1% vs anterior",  True),
+        (c3, "🎯 Ticket Médio",  f"R$ {ticket:.2f}",     "▲ +3.7% vs anterior",  True),
+        (c4, "📊 Taxas MP",      f"R$ {taxas:,.2f}",     "~14% do GMV",           None),
     ]
-
     for col, label, valor, delta, positivo in kpis:
         with col:
-            cor_delta = "delta-up" if positivo else "delta-down"
+            cor = "kpi-delta-up" if positivo else ("kpi-delta-down" if positivo is False else "kpi-delta-neu")
             st.markdown(f"""
-            <div class='metric-card'>
-              <div class='metric-label'>{label}</div>
-              <div class='metric-value'>{valor}</div>
-              <div class='metric-delta {cor_delta}'>{delta} vs. período anterior</div>
+            <div class='kpi'>
+              <div class='kpi-label'>{label}</div>
+              <div class='kpi-value'>{valor}</div>
+              <div class='{cor}'>{delta}</div>
             </div>
             """, unsafe_allow_html=True)
 
-    # KPIs Financeiros
-    st.markdown("<div class='section-title'>💵 Resultado Financeiro</div>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
+    st.markdown("<div style='margin-top:12px'></div>", unsafe_allow_html=True)
 
-    fin_kpis = [
-        (col1, "📥 Receita Líquida",  f"R$ {metricas['receita_liquida']:,.2f}", "▲ +9.8%",  True),
-        (col2, "🏦 Custos Fixos",     f"R$ {TOTAL_CUSTOS_FIXOS:.2f}",           "= Fixo",   None),
-        (col3, "✅ Lucro Líquido",    f"R$ {metricas['lucro_liquido']:,.2f}",   f"Margem {metricas['margem']:.1f}%", metricas['lucro_liquido'] > 0),
+    # KPIs linha 2
+    c1, c2, c3 = st.columns(3)
+    fin = [
+        (c1, "📥 Receita Líquida", f"R$ {rec_liq:,.2f}", "▲ +9.8% vs anterior",   True),
+        (c2, "🔒 Custos Fixos",    f"R$ {TOTAL_CUSTOS_FIXOS:.2f}", "Valor fixo mensal", None),
+        (c3, "✅ Lucro Líquido",   f"R$ {lucro:,.2f}",   f"Margem: {margem:.1f}%", lucro > 0),
     ]
-
-    for col, label, valor, delta, positivo in fin_kpis:
+    for col, label, valor, delta, positivo in fin:
         with col:
-            if positivo is None:
-                cor = "delta-down"
-            elif positivo:
-                cor = "delta-up"
-            else:
-                cor = "delta-down"
+            cor = "kpi-delta-up" if positivo else ("kpi-delta-down" if positivo is False else "kpi-delta-neu")
+            cor_val = "#00D97A" if (positivo is True) else ("#FF4A6E" if positivo is False else "#F0F0FF")
             st.markdown(f"""
-            <div class='metric-card'>
-              <div class='metric-label'>{label}</div>
-              <div class='metric-value'>{valor}</div>
-              <div class='metric-delta {cor}'>{delta}</div>
+            <div class='kpi'>
+              <div class='kpi-label'>{label}</div>
+              <div class='kpi-value' style='color:{cor_val}'>{valor}</div>
+              <div class='{cor}'>{delta}</div>
             </div>
             """, unsafe_allow_html=True)
 
-    # Gráficos
-    st.markdown("<div class='section-title'>📉 Evolução do GMV por Marketplace</div>", unsafe_allow_html=True)
-
-    df_daily = df.groupby(["data", "marketplace"])["gmv"].sum().reset_index()
-
-    fig_gmv = px.line(
-        df_daily, x="data", y="gmv", color="marketplace",
-        color_discrete_map=MARKETPLACE_CORES,
-        labels={"data": "", "gmv": "GMV (R$)", "marketplace": ""},
+    # Gráficos linha 1
+    st.markdown("<div class='sec'>📈 Evolução do GMV por Marketplace</div>", unsafe_allow_html=True)
+    df_daily = df.groupby(["data","marketplace"])["gmv"].sum().reset_index()
+    fig_line = px.line(df_daily, x="data", y="gmv", color="marketplace",
+                       color_discrete_map=MARKETPLACE_CORES,
+                       labels={"data":"","gmv":"GMV (R$)","marketplace":""})
+    fig_line.update_layout(
+        height=300, plot_bgcolor="#0A0B15", paper_bgcolor="#0A0B15",
+        font=dict(color="#5A5A90", family="Inter"),
+        legend=dict(orientation="h", y=-0.2, bgcolor="rgba(0,0,0,0)"),
+        xaxis=dict(gridcolor="#131328"), yaxis=dict(gridcolor="#131328"),
+        margin=dict(l=0, r=0, t=10, b=0), hovermode="x unified",
     )
-    fig_gmv.update_layout(
-        plot_bgcolor="#0D0D1A",
-        paper_bgcolor="#0D0D1A",
-        font=dict(color="#9090B0", family="DM Sans"),
-        legend=dict(orientation="h", y=-0.15, bgcolor="rgba(0,0,0,0)"),
-        xaxis=dict(gridcolor="#1E1E2E", showgrid=True),
-        yaxis=dict(gridcolor="#1E1E2E", showgrid=True),
-        margin=dict(l=0, r=0, t=20, b=0),
-        hovermode="x unified",
-    )
-    fig_gmv.update_traces(line=dict(width=2.5))
-    st.plotly_chart(fig_gmv, use_container_width=True)
+    fig_line.update_traces(line=dict(width=2.5))
+    st.plotly_chart(fig_line, use_container_width=True, config={"displayModeBar": False})
 
+    # Gráficos linha 2
     col1, col2 = st.columns(2)
-
     with col1:
-        st.markdown("<div class='section-title'>🥧 GMV por Marketplace</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sec'>🥧 GMV por Marketplace</div>", unsafe_allow_html=True)
         df_mp = df.groupby("marketplace")["gmv"].sum().reset_index()
-        fig_pie = px.pie(
-            df_mp, names="marketplace", values="gmv",
-            color="marketplace", color_discrete_map=MARKETPLACE_CORES,
-            hole=0.55,
-        )
+        fig_pie = px.pie(df_mp, names="marketplace", values="gmv",
+                         color="marketplace", color_discrete_map=MARKETPLACE_CORES, hole=0.55)
         fig_pie.update_layout(
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#9090B0", family="DM Sans"),
-            legend=dict(orientation="v", bgcolor="rgba(0,0,0,0)"),
+            height=280, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#9090B0", family="Inter"),
+            legend=dict(orientation="h", bgcolor="rgba(0,0,0,0)"),
             margin=dict(l=0, r=0, t=10, b=0),
         )
-        fig_pie.update_traces(textfont_color="#F0F0FF")
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, use_container_width=True, config={"displayModeBar": False})
 
     with col2:
-        st.markdown("<div class='section-title'>📊 Receita vs. Custos</div>", unsafe_allow_html=True)
-        categorias   = ["GMV Total", "Taxas MP", "Custo Produto", "Custos Fixos", "Lucro Líquido"]
-        valores      = [
-            metricas["gmv_total"],
-            -metricas["taxas_total"],
-            -df["custo_produto"].sum(),
-            -TOTAL_CUSTOS_FIXOS,
-            metricas["lucro_liquido"],
-        ]
-        cores_bar = ["#4A4AFF", "#FF4A6E", "#FF9944", "#FF4AF8", "#00E87A"]
-
-        fig_bar = go.Figure(go.Bar(
-            x=categorias, y=valores,
-            marker_color=cores_bar,
-            text=[f"R$ {abs(v):,.0f}" for v in valores],
-            textposition="outside",
-            textfont=dict(color="#C0C0E0", size=11),
-        ))
+        st.markdown("<div class='sec'>💹 Receita vs. Custos</div>", unsafe_allow_html=True)
+        cats = ["GMV Total","Taxas MP","Custo Produto","Custos Fixos","Lucro Líquido"]
+        vals = [gmv, -taxas, -custo_p, -TOTAL_CUSTOS_FIXOS, lucro]
+        cores_b = ["#7B7BFF","#FF4A6E","#FF9944","#FF5AF5","#00D97A" if lucro>0 else "#FF4A6E"]
+        fig_bar = go.Figure(go.Bar(x=cats, y=vals, marker_color=cores_b,
+                                   text=[f"R$ {abs(v):,.0f}" for v in vals],
+                                   textposition="outside",
+                                   textfont=dict(color="#9090B0", size=11)))
         fig_bar.update_layout(
-            plot_bgcolor="#0D0D1A", paper_bgcolor="#0D0D1A",
-            font=dict(color="#9090B0", family="DM Sans"),
-            showlegend=False,
-            xaxis=dict(gridcolor="#1E1E2E"),
-            yaxis=dict(gridcolor="#1E1E2E", showgrid=True),
+            height=280, plot_bgcolor="#0A0B15", paper_bgcolor="#0A0B15",
+            font=dict(color="#5A5A90", family="Inter"), showlegend=False,
+            xaxis=dict(gridcolor="#131328"), yaxis=dict(gridcolor="#131328", showgrid=True),
             margin=dict(l=0, r=0, t=30, b=0),
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, use_container_width=True, config={"displayModeBar": False})
 
-    # Insights IA (simulados)
-    st.markdown("<div class='section-title'>🤖 Insights Automáticos (prévia)</div>", unsafe_allow_html=True)
+    # Tabela
+    st.markdown("<div class='sec'>📋 Detalhamento por Marketplace</div>", unsafe_allow_html=True)
+    df_tab = df.groupby("marketplace").agg(
+        Pedidos=("pedidos","sum"), GMV=("gmv","sum"),
+        Taxas=("taxa","sum"), Receita_Liq=("receita_liq","sum")
+    ).reset_index()
+    df_tab["Margem (%)"] = (df_tab["Receita_Liq"] / df_tab["GMV"] * 100).round(1)
+    df_tab = df_tab.rename(columns={"marketplace":"Marketplace","Receita_Liq":"Receita Líq."})
+    for c in ["GMV","Taxas","Receita Líq."]:
+        df_tab[c] = df_tab[c].map("R$ {:,.2f}".format)
+    st.dataframe(df_tab, use_container_width=True, hide_index=True,
+                 column_config={"Margem (%)": st.column_config.ProgressColumn(
+                     "Margem %", format="%.1f%%", min_value=0, max_value=60)})
 
+    # Insights
+    st.markdown("<div class='sec'>🤖 Insights Automáticos</div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3)
     insights = [
-        ("⚠️ Queda de Performance", "TikTok Shop registrou queda de 18% no GMV nos últimos 3 dias. Verifique o orçamento de tráfego pago ou atualize a capa do produto mais vendido."),
-        ("🚀 Oportunidade Detectada", "Shopee apresenta ticket médio 23% acima da meta esta semana. Considere aumentar o preço em R$ 15–20 sem impacto na conversão."),
-        ("📦 Estoque em Risco", "Produto 'Kit Organizador' tem velocidade de venda alta na Amazon. Reforce o pedido ao fornecedor nos próximos 2 dias."),
+        (col1, "ins-w", "c-w", "⚠️ Queda de Performance",
+         "TikTok Shop registrou queda de 18% no GMV nos últimos 3 dias. Atualize a capa do produto mais vendido ou revise o preço."),
+        (col2, "ins-g", "c-g", "🚀 Oportunidade Detectada",
+         "Shopee apresenta ticket médio 23% acima da meta esta semana. Considere aumentar o preço em R$ 15–20."),
+        (col3, "ins-b", "c-b", "📦 Estoque em Risco",
+         "Produto 'Kit Organizador' tem alta velocidade de venda na Amazon. Reforce o pedido ao fornecedor."),
     ]
-    for titulo, texto in insights:
+    for col, cls, ccls, titulo, texto in insights:
+        with col:
+            st.markdown(f"""
+            <div class='ins {cls}'>
+              <div class='ins-title {ccls}'>{titulo}</div>
+              <div class='ins-text'>{texto}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FINANCEIRO
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "💰 Financeiro":
+
+    st.markdown("## 💰 Painel Financeiro", unsafe_allow_html=True)
+
+    c1, c2, c3, c4 = st.columns(4)
+    for col, label, valor, delta, positivo in [
+        (c1, "✅ Lucro Líquido",   f"R$ {lucro:,.2f}",   f"Margem {margem:.1f}%",  lucro>0),
+        (c2, "📥 Receita Líquida", f"R$ {rec_liq:,.2f}", "▲ +9.8%",                True),
+        (c3, "📊 Taxas MP",        f"R$ {taxas:,.2f}",   f"{taxas/gmv*100:.1f}% do GMV", None),
+        (c4, "🔒 Custos Fixos",    f"R$ {TOTAL_CUSTOS_FIXOS:.2f}", "Valor fixo mensal", None),
+    ]:
+        with col:
+            cor = "kpi-delta-up" if positivo else ("kpi-delta-down" if positivo is False else "kpi-delta-neu")
+            cor_val = "#00D97A" if positivo is True else ("#FF4A6E" if positivo is False else "#F0F0FF")
+            st.markdown(f"""
+            <div class='kpi'>
+              <div class='kpi-label'>{label}</div>
+              <div class='kpi-value' style='color:{cor_val}'>{valor}</div>
+              <div class='{cor}'>{delta}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns([3, 2])
+
+    with col1:
+        st.markdown("<div class='sec'>📊 Composição do Resultado</div>", unsafe_allow_html=True)
+        cats = ["GMV Total","− Taxas MP","− Custo Produto","− Custos Fixos","= Lucro"]
+        vals = [gmv, -taxas, -custo_p, -TOTAL_CUSTOS_FIXOS, lucro]
+        cores_b = ["#7B7BFF","#FF4A6E","#FF9944","#FF5AF5","#00D97A" if lucro>0 else "#FF4A6E"]
+        fig3 = go.Figure(go.Bar(x=cats, y=vals, marker_color=cores_b,
+                                text=[f"R$ {abs(v):,.2f}" for v in vals],
+                                textposition="outside",
+                                textfont=dict(color="#9090B0", size=11)))
+        fig3.update_layout(
+            height=320, plot_bgcolor="#0A0B15", paper_bgcolor="#0A0B15",
+            font=dict(color="#5A5A90"), showlegend=False,
+            xaxis=dict(gridcolor="#131328"), yaxis=dict(gridcolor="#131328"),
+            margin=dict(l=0, r=0, t=30, b=0),
+        )
+        st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
+
+    with col2:
+        st.markdown("<div class='sec'>🔒 Custos Fixos Mensais</div>", unsafe_allow_html=True)
+        st.markdown("<div class='kpi' style='padding:20px 22px'>", unsafe_allow_html=True)
+        for nome, val in CUSTOS_FIXOS.items():
+            st.markdown(f"""
+            <div class='cost-row'>
+              <span class='c-name'>{nome}</span>
+              <span class='c-val'>R$ {val:.2f}</span>
+            </div>
+            """, unsafe_allow_html=True)
         st.markdown(f"""
-        <div class='insight-card'>
-          <div class='insight-title'>{titulo}</div>
-          <div class='insight-text'>{texto}</div>
+        <div style='display:flex;justify-content:space-between;padding-top:14px;'>
+          <span style='color:#E0E0FF;font-weight:700;'>TOTAL MENSAL</span>
+          <span style='color:#FF4A6E;font-weight:800;font-family:Syne,sans-serif;font-size:18px;'>
+            R$ {TOTAL_CUSTOS_FIXOS:.2f}
+          </span>
+        </div></div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<div class='sec'>🤖 Alertas</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='ins ins-g'>
+          <div class='ins-title c-g'>✅ Operação Lucrativa</div>
+          <div class='ins-text'>Margem de {margem:.1f}% cobre todos os custos fixos com folga.</div>
+        </div>
+        <div class='ins ins-b'>
+          <div class='ins-title c-b'>💡 Meta: R$ 2.000 de lucro</div>
+          <div class='ins-text'>Você precisa de R$ {(2000+TOTAL_CUSTOS_FIXOS)/0.41:,.0f} de GMV mensal para atingir essa meta.</div>
         </div>
         """, unsafe_allow_html=True)
 
-    # Tabela de vendas
-    st.markdown("<div class='section-title'>📋 Detalhamento por Marketplace</div>", unsafe_allow_html=True)
-    df_resumo = df.groupby("marketplace").agg(
-        Pedidos=("pedidos", "sum"),
-        GMV=("gmv", "sum"),
-        Taxas=("taxa_marketplace", "sum"),
-        Receita_Liquida=("receita_liquida", "sum"),
-    ).reset_index()
-    df_resumo["Margem (%)"] = (df_resumo["Receita_Liquida"] / df_resumo["GMV"] * 100).round(1)
-    df_resumo = df_resumo.rename(columns={"marketplace": "Marketplace"})
-    for col in ["GMV", "Taxas", "Receita_Liquida"]:
-        df_resumo[col] = df_resumo[col].map("R$ {:,.2f}".format)
-
-    st.dataframe(
-        df_resumo, use_container_width=True, hide_index=True,
-        column_config={
-            "Margem (%)": st.column_config.ProgressColumn(
-                "Margem %", format="%.1f%%", min_value=0, max_value=60
-            )
-        }
-    )
-
-elif "Anúncios" in pagina:
+# ══════════════════════════════════════════════════════════════════════════════
+# ANÚNCIOS
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "🤖 Gerador de Anúncios":
+    st.markdown("## 🤖 Gerador de Anúncios com IA")
     st.markdown("""
-    <div style='text-align:center; padding:80px 0;'>
-      <div style='font-size:64px; margin-bottom:16px;'>🤖</div>
-      <div style='font-family:Syne,sans-serif; font-size:24px; font-weight:700; color:#C0C0E0;'>
-        Gerador de Anúncios IA
-      </div>
-      <div style='color:#6B6B8A; margin-top:8px; font-size:15px;'>
-        Integração com Google Gemini · Em breve no Passo 2
+    <div class='cs'>
+      <div class='cs-icon'>🤖</div>
+      <div class='cs-title'>Gerador de Anúncios com Google Gemini</div>
+      <div class='cs-sub'>
+        Cole o link do produto do fornecedor e a IA vai gerar automaticamente:<br>
+        ✅ Títulos otimizados para SEO (até 60 caracteres)<br>
+        ✅ Descrições persuasivas com gatilhos mentais<br>
+        ✅ Versões adaptadas para cada marketplace
       </div>
     </div>
     """, unsafe_allow_html=True)
+    st.info("🔜 Em construção — Passo 2 do projeto (integração com API do Google Gemini)")
 
-elif "Auditoria" in pagina:
+# ══════════════════════════════════════════════════════════════════════════════
+# AUDITORIA
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "🔍 Auditoria da Loja":
+    st.markdown("## 🔍 Auditoria da Loja em Tempo Real")
     st.markdown("""
-    <div style='text-align:center; padding:80px 0;'>
-      <div style='font-size:64px; margin-bottom:16px;'>🔍</div>
-      <div style='font-family:Syne,sans-serif; font-size:24px; font-weight:700; color:#C0C0E0;'>
-        Auditoria da Loja em Tempo Real
-      </div>
-      <div style='color:#6B6B8A; margin-top:8px; font-size:15px;'>
-        Análise automática com IA · Em breve no Passo 3
+    <div class='cs'>
+      <div class='cs-icon'>🔍</div>
+      <div class='cs-title'>Auditoria Inteligente com IA</div>
+      <div class='cs-sub'>
+        A IA vai analisar seus dados de vendas e tráfego do Bling ERP e gerar insights automáticos:<br>
+        ✅ Produtos com queda de performance<br>
+        ✅ Sugestões de preço e capa<br>
+        ✅ Alertas de oportunidade por marketplace
       </div>
     </div>
     """, unsafe_allow_html=True)
+    st.info("🔜 Em construção — Passo 3 do projeto (integração com Bling API v3 + Gemini)")
 
-elif "Mineração" in pagina:
+# ══════════════════════════════════════════════════════════════════════════════
+# MINERAÇÃO
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "💎 Mineração de Produtos":
+    st.markdown("## 💎 Mineração de Produtos Vencedores")
     st.markdown("""
-    <div style='text-align:center; padding:80px 0;'>
-      <div style='font-size:64px; margin-bottom:16px;'>💎</div>
-      <div style='font-family:Syne,sans-serif; font-size:24px; font-weight:700; color:#C0C0E0;'>
-        Mineração de Produtos Vencedores
-      </div>
-      <div style='color:#6B6B8A; margin-top:8px; font-size:15px;'>
-        Web Scraping com Playwright · Em breve no Passo 4
+    <div class='cs'>
+      <div class='cs-icon'>💎</div>
+      <div class='cs-title'>Mineração Automática de Produtos</div>
+      <div class='cs-sub'>
+        Web scraping automático monitorando os melhores produtos:<br>
+        ✅ Mais vendidos da Shopee e Amazon<br>
+        ✅ Tendências do TikTok Creative Center<br>
+        ✅ Alertas de produtos virais em tempo real
       </div>
     </div>
     """, unsafe_allow_html=True)
+    st.info("🔜 Em construção — Passo 4 do projeto (Playwright + BeautifulSoup)")
