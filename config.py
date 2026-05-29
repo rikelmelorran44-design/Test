@@ -1,6 +1,6 @@
 # config.py — Configurações Globais e Custos Fixos
 
-APP_NAME = "DropIntel"
+APP_NAME = "Rikelme Drop"
 APP_VERSION = "1.0.0"
 
 CUSTOS_FIXOS = {
@@ -10,7 +10,7 @@ CUSTOS_FIXOS = {
     "MEI DAS":               73.40,
 }
 
-TOTAL_CUSTOS_FIXOS = sum(CUSTOS_FIXOS.values())
+TOTAL_CUSTOS_FIXOS = sum(CUSTOS_FIXOS.values())  # R$ 348,40
 
 MARKETPLACES = ["Kwai Shop", "TikTok Shop", "Amazon", "Shopee"]
 
